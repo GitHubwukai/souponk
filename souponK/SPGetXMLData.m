@@ -10,6 +10,7 @@
 #import "SPAdsData.h"
 #import "SPCityData.h"
 #import "Reachability.h"
+#import "SPHotData.h"
 
 @implementation SPGetXMLData
 
@@ -66,6 +67,20 @@
 			data.s_adURL = [TBXML valueOfAttributeNamed:@"url" forElement:ads];
 			
 			ads = [TBXML nextSiblingNamed:@"ad" searchFromElement:ads];
+			[dataArray addObject:data];
+			[data release];
+		}
+	}
+	if (type == xHotlist) {
+		TBXMLElement *coupon = [TBXML childElementNamed:@"coupon" parentElement:root];
+		while (coupon != nil) {
+			SPHotData *data = [[SPHotData alloc] init];
+			data.s_hotid = [TBXML valueOfAttributeNamed:@"id" forElement:coupon	];
+			data.s_caption = [TBXML valueOfAttributeNamed:@"caption" forElement:coupon];
+			data.s_description = [TBXML valueOfAttributeNamed:@"description" forElement:coupon];
+			data.s_icon = [TBXML valueOfAttributeNamed:@"icon" forElement:coupon];
+			data.s_popularity = [TBXML valueOfAttributeNamed:@"popularity" forElement:coupon];
+			coupon = [TBXML nextSiblingNamed:@"coupon" searchFromElement:coupon];
 			[dataArray addObject:data];
 			[data release];
 		}

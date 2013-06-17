@@ -10,6 +10,8 @@
 #import "Status.h"
 #import "SPGetXMLData.h"
 #import "SPCityData.h"
+#import "SPHotData.h"
+#import "SPCell.h"
 
 @interface kkFirstViewController ()
 {
@@ -20,6 +22,7 @@
 
 @implementation kkFirstViewController
 @synthesize controller;
+@synthesize hotTableView;
 
 - (id)initWithNibName:(NSString *)nibNameOrNil
 			   bundle:(NSBundle *)nibBundleOrNil
@@ -68,15 +71,42 @@
 	
 	cityArray = [[NSArray alloc]initWithArray:
 	[SPGetXMLData  parserXML:citysString type:xGetcitys]];
-	//button标题默认为第一个城市
-	NSLog(@"cityarray count is %d", [cityArray count]);
-	NSLog(@"%@", cityArray);
 	SPCityData *b = [cityArray objectAtIndex:0];
 	leftItem = [[UIBarButtonItem alloc] initWithTitle:b.s_cityCaption
 												style:UIBarButtonItemStyleBordered
 											   target:self
 											   action:@selector(leftItemClicked:)];
-
+	//asihttp获取人气城市团购数据
+	NSURL *hotCityUrl = [NSURL URLWithString:[NSString
+												 stringWithFormat:
+												 HOTLISTBYCITY,
+												 b.s_cityID,
+												 10]];
+	
+	ASIHTTPRequest *request = [ASIHTTPRequest requestWithURL:hotCityUrl];
+	loadOver = NO;
+	[request setDelegate:self];
+	loadOver = [request didUseCachedResponse];
+	request.downloadProgressDelegate = self;
+	[request startAsynchronous];
+	//获取结束，解析在获取之后进行
+	//初始化tableview
+	hotTableView = [[UITableView alloc] initWithFrame:CGRectMake(0, 110, 320, 258)];
+	hotTableView.delegate = self;
+	hotTableView.dataSource = self;
+	hotTableView.tag = 10;
+	
+	[self.view addSubview:hotTableView];
+	
+	//tableviewcell图片异步加载
+	objManager = [[HJObjManager alloc] initWithLoadingBufferSize:6 memCacheSize:20];
+	NSString* cacheDirectory = [NSHomeDirectory() stringByAppendingString:@"/Library/Caches/imgcache/flickr/"];
+	HJMOFileCache* fileCache = [[[HJMOFileCache alloc] initWithRootPath:cacheDirectory] autorelease];
+	objManager.fileCache = fileCache;
+	// Have the file cache trim itself down to a size & age limit, so it doesn't grow forever
+	fileCache.fileCountLimit = 100;
+	fileCache.fileAgeLimit = 60*60*24*7; //1 week
+	[fileCache trimCacheUsingBackgroundThread];
 }
 
 //PagePhotoSDataSource
@@ -89,7 +119,6 @@
 {
 	SPAdsData *ad = [adsArray objectAtIndex:index];
 	NSString *urlString = [NSString stringWithFormat:@"%@%@",GETIMAGE, ad.s_adName];
-	//NSLog(@"%@", urlString);
 	
 	UIImage *cachedImage = [manager imageWithURL:[NSURL URLWithString:urlString]];
 	//将需要缓存的图片加载进来
@@ -131,14 +160,64 @@
 	[visiblePopoverController autorelease];
 }
 
+//获取人气城市信息后进行解析
+- (void)requestFinished:(ASIHTTPRequest *)request
+{
+	loadOver = YES;
+	//获取应答数据
+	NSString *responseString = [request responseString];
+	//数据获取成功
+	if (![responseString isEqualToString:@""]) {
+		hotArray = [[NSMutableArray alloc]initWithArray:
+					[SPGetXMLData parserXML:responseString type:xHotlist]];
+		
+		[hotTableView reloadData];
+	}
+	//解析成功，默认返回10条数据
+}
+//获取失败alert提示
+-(void)requestFailed:(ASIHTTPRequest
+					  *)request{
+	loadOver = YES;
+	UIAlertView *alert = [[UIAlertView alloc]
+						  initWithTitle:@"获取数据失败，请稍后重试。"
+						  message:nil
+						  delegate:nil
+						  cancelButtonTitle:@"知道了"
+						  otherButtonTitles:nil];
+	[alert show];
+	[alert release];
+}
 
 
+- (void)imageDownloader:(SDWebImageDownloader *)downloader didFinishWithImage:(UIImage *)image{
+	
+}
 
 //tableviewdelegate
 - (void)tableView:(UITableView *)tableView
 didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {
-	
+	//选择城市后刷新tableview数据
+	[tableView deselectRowAtIndexPath:indexPath animated:YES];
+	if (tableView.tag == 12) {
+		SPCityData *city = [cityArray objectAtIndex:indexPath.row];
+		leftItem.title = city.s_cityCaption;
+		
+		[popover dismissPopoverAnimated:YES];
+		
+		NSStringEncoding encode = CFStringConvertEncodingToNSStringEncoding(kCFStringEncodingGB_18030_2000);
+		
+		NSString *s = [NSString stringWithFormat:HOTLISTBYCITY, city.s_cityID,10];
+		NSString *hotString = [NSString stringWithContentsOfURL:
+							   [NSURL URLWithString:s] usedEncoding:&encode  error:nil];
+		
+		hotArray = [[NSMutableArray alloc]initWithArray:
+					[SPGetXMLData parserXML:hotString type:xHotlist]];
+		
+		[hotTableView reloadData];
+
+	}
 }
 
 - (NSInteger)tableView:(UITableView *)tableView
@@ -148,23 +227,57 @@ didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 	{
 		return [cityArray count];
 	}
+	return [hotArray count];
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView
 		 cellForRowAtIndexPath:(NSIndexPath *)indexPath
 {
+	//弹出视图的cell
+	if (tableView.tag == 12) {
 		UITableViewCell *cell = [[[UITableViewCell alloc]
 								  initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"Cell"] autorelease];
 		SPCityData *b = [cityArray objectAtIndex:indexPath.row];
 		cell.textLabel.text = b.s_cityCaption;
-	
 		return cell;
+	}
+	//人气城市团购的cell
+	
+	HJManagedImageV *image;
+	static NSString *cellIdentifier = @"CEllIdentifier";
+	SPCell *cell = [tableView dequeueReusableCellWithIdentifier:cellIdentifier];	
+	if (cell == nil) {
+		cell = [[SPCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIdentifier];
+		image = [[[HJManagedImageV alloc]initWithFrame:CGRectMake(1, -1, 65, 70)]autorelease];
+		image.tag = 666;
+		[cell addSubview:image];
+	}
+	else
+		{
+		//image的重复使用
+		image = (HJManagedImageV *)[cell viewWithTag:666];
+		[image clear];
+		}
+
+	SPHotData *h = [hotArray objectAtIndex:indexPath.row];
+	[cell setHotData:h];
+	
+	//异步加载图片
+	NSString *imageUrl = [NSString stringWithFormat:@"%@%@",GETIMAGE, h.s_icon];
+	imageUrl = [imageUrl stringByAddingPercentEscapesUsingEncoding:CFStringConvertEncodingToNSStringEncoding(kCFStringEncodingGB_18030_2000)];
+	image.url = [NSURL URLWithString:imageUrl];
+	[objManager manage:image];
+
+	return cell;
 }
 
 - (CGFloat)tableView:(UITableView *)tableView
 heightForRowAtIndexPath:(NSIndexPath *)indexPath
 {
-	return 45;
+	if (tableView.tag == 12) {
+		return 45;
+	}
+	return 70;
 }
 
 
