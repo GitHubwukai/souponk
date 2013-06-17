@@ -152,8 +152,8 @@
 		3C5C188F176C003F0057D879 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		3C5F9E71176EC78F00576745 /* SPHotData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SPHotData.h; path = ../SPHotData.h; sourceTree = "<group>"; };
 		3C5F9E72176EC78F00576745 /* SPHotData.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = SPHotData.m; path = ../SPHotData.m; sourceTree = "<group>"; };
-		3C5F9E77176ED70700576745 /* SPCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SPCell.h; sourceTree = "<group>"; };
-		3C5F9E78176ED70700576745 /* SPCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SPCell.m; sourceTree = "<group>"; };
+		3C5F9E77176ED70700576745 /* SPCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SPCell.h; path = ../SPCell.h; sourceTree = "<group>"; };
+		3C5F9E78176ED70700576745 /* SPCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = SPCell.m; path = ../SPCell.m; sourceTree = "<group>"; };
 		3C5F9E7A176EDBD600576745 /* listview_times_icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = listview_times_icon.png; sourceTree = "<group>"; };
 		3CA1E00B176C0FBA00185965 /* SPGetAds.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SPGetAds.h; sourceTree = "<group>"; };
 		3CA1E00C176C0FBA00185965 /* SPGetAds.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SPGetAds.m; sourceTree = "<group>"; };
@@ -221,8 +221,6 @@
 		3C5C17F5176BE7620057D879 = {
 			isa = PBXGroup;
 			children = (
-				3C5F9E77176ED70700576745 /* SPCell.h */,
-				3C5F9E78176ED70700576745 /* SPCell.m */,
 				3C5C180A176BE7620057D879 /* souponK */,
 				3C5C1803176BE7620057D879 /* Frameworks */,
 				3C5C1801176BE7620057D879 /* Products */,
@@ -342,6 +340,8 @@
 		3C5C1844176BF49B0057D879 /* model */ = {
 			isa = PBXGroup;
 			children = (
+				3C5F9E77176ED70700576745 /* SPCell.h */,
+				3C5F9E78176ED70700576745 /* SPCell.m */,
 				3C5F9E71176EC78F00576745 /* SPHotData.h */,
 				3C5F9E72176EC78F00576745 /* SPHotData.m */,
 				3C5C1845176BF4AE0057D879 /* SPAdsData.h */,
