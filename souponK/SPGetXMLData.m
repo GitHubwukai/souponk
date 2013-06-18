@@ -11,6 +11,7 @@
 #import "SPCityData.h"
 #import "Reachability.h"
 #import "SPHotData.h"
+#import "SPPartition.h"
 
 @implementation SPGetXMLData
 
@@ -85,6 +86,36 @@
 			[data release];
 		}
 	}
+	
+	if (type == xPartitionB || type == xPartitionC || type == xPartitionD) {
+		NSString *string = @"";
+		switch (type) {
+			case xPartitionB:
+				string = @"brand";
+				break;
+			case xPartitionC:
+				string = @"category";
+				break;
+			case xPartitionD:
+				string = @"district";
+				break;
+			default:
+				break;
+		}
+		TBXMLElement *ads = [TBXML childElementNamed:string parentElement:root];
+		while (ads != nil) {
+			//写到这里先去实现数据类型
+			SPPartition *data = [[SPPartition alloc] init];
+			data.s_id = [TBXML valueOfAttributeNamed:@"id" forElement:ads];
+			data.s_caption = [TBXML valueOfAttributeNamed:@"caption" forElement:ads];
+			data.s_keyword = [TBXML valueOfAttributeNamed:@"keyword" forElement:ads];
+			
+			ads = [TBXML nextSiblingNamed:string searchFromElement:ads];
+			[dataArray addObject:data];
+			[data release];
+		}
+	}
+	
 	return dataArray;
 }
 

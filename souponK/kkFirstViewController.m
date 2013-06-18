@@ -50,20 +50,32 @@
 	//对接口返回数据进行转码
 	NSStringEncoding encode = CFStringConvertEncodingToNSStringEncoding(kCFStringEncodingGB_18030_2000);
 	
+	//---------------------------------------
 	//广告图像获取
+	//---------------------------------------
+	//初始化异步加载图片
 	manager = [SDWebImageManager sharedManager];
-	//通过SPGetAds解析xml返回结果
-	SPGetAds *spgetAds = [[SPGetAds alloc] init];
-	adsArray = spgetAds.xmlDataArray;
+	//解析广告数据
+	NSString *adsString = [NSString stringWithContentsOfURL:
+						   [NSURL URLWithString:ADS]
+											   usedEncoding:&encode
+													  error:nil];
+	adsArray = [[NSArray alloc] initWithArray:
+				[SPGetXMLData parserXML:adsString type:xAds]];
 	
+	//---------------------------------------
 	//创建滚动视图
+	//---------------------------------------
 	pagePhotosView = [[PagePhotosView alloc]
-					  initWithFrame:CGRectMake(0, 0, 320, 130)
+					  initWithFrame:CGRectMake(0, 0, 320, 110)
 					  withDataSource:self];
 	[self.view addSubview:pagePhotosView];
 	[pagePhotosView release];
 	
+	//---------------------------------------
 	//获取城市
+	//---------------------------------------
+	//返回保存城市名称的数组
 	NSString *citysString = [NSString stringWithContentsOfURL:
 							 [NSURL URLWithString:GETCITYS]
 												 usedEncoding:&encode
@@ -76,32 +88,41 @@
 												style:UIBarButtonItemStyleBordered
 											   target:self
 											   action:@selector(leftItemClicked:)];
+	//---------------------------------------
 	//asihttp获取人气城市团购数据
+	//---------------------------------------
 	NSURL *hotCityUrl = [NSURL URLWithString:[NSString
 												 stringWithFormat:
 												 HOTLISTBYCITY,
 												 b.s_cityID,
-												 10]];
-	
+												 10]];	
 	ASIHTTPRequest *request = [ASIHTTPRequest requestWithURL:hotCityUrl];
 	loadOver = NO;
 	[request setDelegate:self];
 	loadOver = [request didUseCachedResponse];
 	request.downloadProgressDelegate = self;
 	[request startAsynchronous];
+	
+	//---------------------------------------
 	//获取结束，解析在获取之后进行
 	//初始化tableview
-	hotTableView = [[UITableView alloc] initWithFrame:CGRectMake(0, 110, 320, 258)];
+	//---------------------------------------
+	hotTableView = [[UITableView alloc]
+					initWithFrame:CGRectMake(0, 110, 320, 258)];
 	hotTableView.delegate = self;
 	hotTableView.dataSource = self;
 	hotTableView.tag = 10;
 	
 	[self.view addSubview:hotTableView];
 	
+	//---------------------------------------
 	//tableviewcell图片异步加载
+	//---------------------------------------
 	objManager = [[HJObjManager alloc] initWithLoadingBufferSize:6 memCacheSize:20];
-	NSString* cacheDirectory = [NSHomeDirectory() stringByAppendingString:@"/Library/Caches/imgcache/flickr/"];
-	HJMOFileCache* fileCache = [[[HJMOFileCache alloc] initWithRootPath:cacheDirectory] autorelease];
+	NSString* cacheDirectory = [NSHomeDirectory()
+								stringByAppendingString:@"/Library/Caches/imgcache/flickr/"];
+	HJMOFileCache* fileCache = [[[HJMOFileCache alloc]
+								 initWithRootPath:cacheDirectory] autorelease];
 	objManager.fileCache = fileCache;
 	// Have the file cache trim itself down to a size & age limit, so it doesn't grow forever
 	fileCache.fileCountLimit = 100;
@@ -109,7 +130,9 @@
 	[fileCache trimCacheUsingBackgroundThread];
 }
 
-//PagePhotoSDataSource
+#pragma mark -
+#pragma mark -PagePhotoSDataSource
+
 - (int)numberOfPages
 {
 	return [adsArray count];
@@ -132,7 +155,9 @@
 	return cachedImage;
 }
 
-//导航栏左侧按钮点击事件
+#pragma mark -
+#pragma mark -导航栏左侧按钮点击事件
+
 - (IBAction)leftItemClicked:(id)sender
 {
 	controller = [[UITableViewController alloc] init];
@@ -152,15 +177,21 @@
 	[i release];
 }
 
-//弹出视图的delegate
+#pragma mark -
+#pragma mark -弹出视图的delegate
+
 //设置视图的消失
-- (void)presentedNewPopoverController:(FPPopoverController *)newPopoverController shouldDismissVisiblePopover:(FPPopoverController *)visiblePopoverController
+- (void)presentedNewPopoverController:(FPPopoverController *)newPopoverController
+		  shouldDismissVisiblePopover:(FPPopoverController *)visiblePopoverController
 {
 	[visiblePopoverController dismissPopoverAnimated:YES];
 	[visiblePopoverController autorelease];
 }
 
-//获取人气城市信息后进行解析
+
+#pragma mark -
+#pragma mark -获取人气城市信息后进行解析
+
 - (void)requestFinished:(ASIHTTPRequest *)request
 {
 	loadOver = YES;
@@ -189,12 +220,16 @@
 	[alert release];
 }
 
-
+#pragma mark -
+#pragma mark -sdImageManagerDelegate
 - (void)imageDownloader:(SDWebImageDownloader *)downloader didFinishWithImage:(UIImage *)image{
 	
 }
 
-//tableviewdelegate
+
+#pragma mark -
+#pragma mark -tableviewdelegate
+
 - (void)tableView:(UITableView *)tableView
 didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {
@@ -254,7 +289,7 @@ didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 	}
 	else
 		{
-		//image的重复使用
+		//image的重用
 		image = (HJManagedImageV *)[cell viewWithTag:666];
 		[image clear];
 		}

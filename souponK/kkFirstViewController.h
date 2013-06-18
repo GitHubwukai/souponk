@@ -18,7 +18,9 @@
 #import "PullToRefreshTableView.h"
 
 
-@interface kkFirstViewController : UIViewController <PagePhotosDataSource, SDWebImageManagerDelegate, UITableViewDataSource, UITableViewDelegate, FPPopoverControllerDelegate, ASIHTTPRequestDelegate, ASIProgressDelegate>
+@interface kkFirstViewController : UIViewController <PagePhotosDataSource,
+SDWebImageManagerDelegate,UITableViewDataSource, UITableViewDelegate,
+FPPopoverControllerDelegate, ASIHTTPRequestDelegate, ASIProgressDelegate>
 {
 	//图片下载管理
 	SDWebImageManager *manager;

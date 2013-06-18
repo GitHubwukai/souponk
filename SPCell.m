@@ -7,7 +7,7 @@
 //
 
 #import "SPCell.h"
-#import "SPGetXMLData.h"
+
 
 @implementation SPCell
 
