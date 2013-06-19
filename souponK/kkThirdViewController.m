@@ -19,6 +19,9 @@
     self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
     if (self) {
         // Custom initialization
+		self.title = NSLocalizedString(@"周边优惠", @"周边优惠");
+		self.tabBarItem.image = [UIImage imageNamed:@"3.png"];
+		self.tabBarController.navigationController.title = @"周边优惠";
     }
     return self;
 }
@@ -27,6 +30,7 @@
 {
     [super viewDidLoad];
     // Do any additional setup after loading the view from its nib.
+	self.tabBarItem.title = @"周边优惠";
 }
 
 - (void)didReceiveMemoryWarning

@@ -10,6 +10,7 @@
 #import "Status.h"
 #import "SPGetXMLData.h"
 #import "SPPartition.h"
+#import "SPCell.h"
 
 @interface kkSecondViewController ()
 {
@@ -21,6 +22,7 @@
 
 @implementation kkSecondViewController
 @synthesize classesButton,brandButton,businessButton;
+@synthesize searchTableView;
 
 - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
 {
@@ -40,40 +42,42 @@
 	[self.tabBarController.navigationItem setRightBarButtonItem:rightItem];
 	self.tabBarController.title = @"优惠搜索";
 	
-	NSUserDefaults *titles = [NSUserDefaults standardUserDefaults];
-	if ([titles boolForKey:@"show"]) {
-		cl = [[titles objectForKey:@"cid"]intValue];
-		br = [[titles objectForKey:@"bid"]intValue];
-		bu = [[titles objectForKey:@"diid"]intValue];
-		
-		if ([titles objectForKey:@"c"] == nil) {
-			classesButton.titleLabel.text = @"全部分类";
-		}else{
-			classesButton.titleLabel.text = [titles objectForKey:@"c"];
-		}
-		if ([titles objectForKey:@"b"] == nil) {
-			brandButton.titleLabel.text = @"全部品牌";
-		}else{
-			brandButton.titleLabel.text = [titles objectForKey:@"b"];
-		}
-		if ([titles objectForKey:@"d"] == nil) {
-			businessButton.titleLabel.text = @"全部商圈";
-		}else{
-			businessButton.titleLabel.text = [titles objectForKey:@"d"];
-		}
+	//数据持久化
+//	NSUserDefaults *titles = [NSUserDefaults standardUserDefaults];
+//	if ([titles boolForKey:@"show"]) {
+//		cl = [[titles objectForKey:@"cid"]intValue];
+//		br = [[titles objectForKey:@"bid"]intValue];
+//		bu = [[titles objectForKey:@"diid"]intValue];
+//		
+//		if ([titles objectForKey:@"c"] == nil) {
+//			classesButton.titleLabel.text = @"全部分类";
+//		}else{
+//			classesButton.titleLabel.text = [titles objectForKey:@"c"];
+//		}
+//		if ([titles objectForKey:@"b"] == nil) {
+//			brandButton.titleLabel.text = @"全部品牌";
+//		}else{
+//			brandButton.titleLabel.text = [titles objectForKey:@"b"];
+//		}
+//		if ([titles objectForKey:@"d"] == nil) {
+//			businessButton.titleLabel.text = @"全部商圈";
+//		}else{
+//			businessButton.titleLabel.text = [titles objectForKey:@"d"];
+//		}
 		//----------------------------
 		//搜索数据请求
 		//----------------------------
 		NSString *s = [NSString stringWithFormat:SEARCHLIST, cl, br,bu,10];
-		NSLog(@"%@",s);
 		ASIHTTPRequest *request = [ASIHTTPRequest requestWithURL:[NSURL URLWithString:s]];
 		loadOver = NO;
 		[request setDelegate:self];
 		loadOver = [request didUseCachedResponse];
 		[request startAsynchronous];
-	}
-	[titles setBool:NO forKey:@"show"];
+//	}
+//	[titles setBool:NO forKey:@"show"];
 }
+
+
 
 - (void)viewDidLoad
 {
@@ -91,6 +95,29 @@
 				 style:UIBarButtonItemStyleDone
 				 target:self
 				 action:@selector(rightItemClicked)];
+	
+	//tableview初始化
+	searchTableView = [[UITableView alloc] initWithFrame:CGRectMake(0, 36, 320, 357)];
+	searchTableView.dataSource = self;
+	searchTableView.delegate = self;
+	searchTableView.tag = 10;
+	
+	[self.view addSubview:searchTableView];
+	
+	//---------------------------------------
+	//tableviewcell图片异步加载
+	//---------------------------------------
+	objManager = [[HJObjManager alloc] initWithLoadingBufferSize:6 memCacheSize:20];
+	NSString* cacheDirectory = [NSHomeDirectory()
+								stringByAppendingString:@"/Library/Caches/imgcache/flickr/"];
+	HJMOFileCache* fileCache = [[[HJMOFileCache alloc]
+								 initWithRootPath:cacheDirectory] autorelease];
+	objManager.fileCache = fileCache;
+	// Have the file cache trim itself down to a size & age limit, so it doesn't grow forever
+	fileCache.fileCountLimit = 100;
+	fileCache.fileAgeLimit = 60*60*24*7; //1 week
+	[fileCache trimCacheUsingBackgroundThread];
+	
 }
 
 - (void)dealloc {
@@ -101,8 +128,23 @@
 	[super dealloc];
 }
 
-#pragma mark
-#pragma mark -获取三大类的数据
+#pragma mark - asihttp delegate
+- (void)requestFinished:(ASIHTTPRequest *)request
+{
+	loadOver = YES;
+	NSString *responseString = [request responseString];
+	if (![responseString isEqualToString:@""]) {
+		searchArray =  [[SPGetXMLData parserXML:responseString type:xHotlist]copy];
+		[searchTableView reloadData];
+	}
+}
+
+- (void)requestFailed:(ASIHTTPRequest *)request
+{
+
+}
+
+#pragma mark - 获取三大类的数据
 - (void)parser
 {
 	NSStringEncoding encode = CFStringConvertEncodingToNSStringEncoding
@@ -124,8 +166,12 @@
 								[NSURL URLWithString:
 								 [NSString stringWithFormat:@"%@%@",PARTITION,@"district"]]
 														usedEncoding:&encode
-														   error:nil];
-
+													   error:nil];
+	//默认hot信息	
+	NSString *hotString = [NSString stringWithContentsOfURL:
+						   [NSURL URLWithString:HOTLIST]
+											   usedEncoding:&encode error:nil];
+	
 	//调用解析xml返回数据保存到数组
 	brandArray = [[NSArray alloc] initWithArray:
 				  [SPGetXMLData parserXML:brandString type:xPartitionB]];
@@ -135,16 +181,44 @@
 
 	districtArray = [[NSArray alloc] initWithArray:
 					 [SPGetXMLData parserXML:districtString type:xPartitionD]];
-
+	
+	if (![hotString isEqualToString:@""]) {
+		searchArray = [[NSArray alloc] initWithArray:
+					   [SPGetXMLData parserXML:hotString type:xHotlist]];
+		loadOver = YES;
+	}
+	else{
+		NSLog(@"error");
+	}
 }
 
-#pragma mark -搜索按钮
+#pragma mark - 搜索按钮
 - (void)rightItemClicked
 {
+	if ([classesButton.titleLabel.text isEqualToString:@"全部分类"]) {
+		cl = 0;
+	}
+	if ([brandButton.titleLabel.text isEqualToString:@"全部品牌"]) {
+		br = 0;
+	}
+	if ([businessButton.titleLabel.text isEqualToString:@"全部商圈"]) {
+		bu = 0;
+	}
+	
+	NSString *tableDataString = [NSString stringWithFormat:SEARCHLIST,cl,br,bu,100];
+	
+	if (loadOver ) {
+		ASIHTTPRequest *request = [ASIHTTPRequest requestWithURL:
+								   [NSURL URLWithString:tableDataString]];
+		loadOver = [request didUseCachedResponse];
+		[request setDelegate:self];
+		
+		[request startAsynchronous];
+	}
 	
 }
 
-#pragma mark -三个按钮绑定同一个点击事件
+#pragma mark - 三个按钮绑定同一个点击事件
 
 - (IBAction)click:(id)sender {
 	if (sender == classesButton) {
@@ -196,7 +270,7 @@
 	}
 }
 
-#pragma mark -tableViewDelegate
+#pragma mark - tableViewDelegate
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
 	int i = 0;
@@ -210,6 +284,9 @@
 
 		return [districtArray count];
 	}
+	if (tableView.tag == 10) {
+		return [searchArray count];
+	}
 	return i;
 
 }
@@ -221,6 +298,37 @@
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
 {
+	if (tableView.tag == 10) {
+		//人气城市团购的cell
+		
+		HJManagedImageV *image;
+		static NSString *cellIdentifier = @"CEllIdentifier";
+		SPCell *cell = [tableView dequeueReusableCellWithIdentifier:cellIdentifier];
+		if (cell == nil) {
+			cell = [[SPCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIdentifier];
+			image = [[[HJManagedImageV alloc]initWithFrame:CGRectMake(1, -1, 65, 70)]autorelease];
+			image.tag = 666;
+			[cell addSubview:image];
+		}
+		else
+			{
+			//image的重用
+			image = (HJManagedImageV *)[cell viewWithTag:666];
+			[image clear];
+			}
+		
+		SPHotData *h = [searchArray objectAtIndex:indexPath.row];
+		[cell setHotData:h];
+		
+		//异步加载图片
+		NSString *imageUrl = [NSString stringWithFormat:@"%@%@",GETIMAGE, h.s_icon];
+		imageUrl = [imageUrl stringByAddingPercentEscapesUsingEncoding:CFStringConvertEncodingToNSStringEncoding(kCFStringEncodingGB_18030_2000)];
+		image.url = [NSURL URLWithString:imageUrl];
+		[objManager manage:image];
+		
+		return cell;
+	}
+	
 	UITableViewCell *cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"cell"]autorelease];
 	SPPartition *data = nil;
 	switch (tableView.tag) {
@@ -236,7 +344,9 @@
 			data = [districtArray objectAtIndex:indexPath.row];
 			cell.textLabel.text = data.s_caption;
 			break;
-			
+//		case 10:
+//			data = [districtArray objectAtIndex:indexPath.row];
+//			cell.textLabel.text = data.s_caption;
 		default:
 			break;
 	}
@@ -247,5 +357,31 @@
  -(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {
 	[popover dismissPopoverAnimated:YES];
+	SPPartition *data = nil;
+	if (tableView.tag == 1) {
+		data = [categoryArray objectAtIndex:indexPath.row];
+		self.classesButton.titleLabel.text = data.s_caption;
+		cl = [data.s_id intValue] + 1;
+	}
+	if (tableView.tag == 2) {
+		data = [brandArray objectAtIndex:indexPath.row];
+		self.brandButton.titleLabel.text = data.s_caption;
+		br = [data.s_id intValue] + 1;
+	}
+	if (tableView.tag == 3) {
+		data = [districtArray objectAtIndex:indexPath.row];
+		self.businessButton.titleLabel.text = data.s_caption;
+		bu = [data.s_id intValue] + 1;
+	}
 }
+
+- (CGFloat)tableView:(UITableView *)tableView
+heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+	if (tableView.tag == 10) {
+		return 70;
+	}
+	return 45;
+}
+
 @end
