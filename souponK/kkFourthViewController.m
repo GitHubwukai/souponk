@@ -21,9 +21,16 @@
         // Custom initialization
 		self.title = NSLocalizedString(@"我的优惠", @"我的优惠");
 		self.tabBarItem.image = [UIImage imageNamed:@"4.png"];
-		self.tabBarItem.title = @"我的优惠";
-    }
+		    }
     return self;
+}
+
+- (void)viewWillAppear:(BOOL)animated
+{
+	[super viewWillAppear:YES];
+	self.tabBarController.title = @"我的优惠";
+	self.tabBarController.navigationController.title = @"我的优惠";
+
 }
 
 - (void)viewDidLoad

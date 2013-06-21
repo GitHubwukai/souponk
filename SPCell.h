@@ -18,4 +18,5 @@
 }
 
 - (void)setHotData:(SPHotData *)data;
+
 @end
